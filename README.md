@@ -5,9 +5,7 @@ Projet de M1 pour l'UE **Traitement des images** et **Codage et compression mult
 
 ### Code
 programme source du projet
-
 ### Compte-rendu 
-Dossier contenant la liste de tous les compte rendu du projet
-
+Dossier contenant la liste de tous les comptes-rendus du projet
 ### Documents
 Article de recherche dans le domaine de la mosaïque d'image.
