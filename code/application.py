@@ -10,6 +10,8 @@ import mosaic
 
 class Application(tk.Tk):
 
+    """Basic application with tkinter"""
+
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         # Title
