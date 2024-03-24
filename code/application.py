@@ -3,6 +3,7 @@ import os
 
 # Interface lib
 import tkinter as tk
+from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 
 # Mosaic lib
@@ -61,6 +62,7 @@ class Application(tk.Tk):
         button_data_location.grid(row=2, column=2, sticky='ew', pady=5)
         button_build_mosaic.grid(row=3, column=2, sticky='ew', pady=5)
 
+        self.main_frame = main_frame
         main_frame.pack()
 
 
@@ -136,6 +138,17 @@ class Application(tk.Tk):
 
         self.mosaic.build_mosaic()
         self.log.set("Contruction terminée !")
+        self.show_result()
+        
+    def show_result(self):
+        """Show the result image in the interface"""
+        
+        path = Image.open(self.text_out.get())
+        resized = path.resize((400, 400), Image.LANCZOS)
+        img = ImageTk.PhotoImage(resized)
+        self.panel = tk.Label(self.main_frame, image=img)
+        self.panel.image = img  # Keep a reference to prevent garbage collection
+        self.panel.grid(row=4, column=1, sticky='', pady=5)
         self.update()
 
 if __name__ == "__main__":
