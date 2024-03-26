@@ -12,6 +12,9 @@ image_out_location = os.path.join(CWD, 'images_test', 'result.jpg')
 dataset_location = os.path.join(CWD, 'dataset', \
     'DIV2K_train_LR_bicubic', 'X2', '*')
 
+dataset_location = os.path.join(CWD, 'dataset', \
+    'cifar-10-batches-py', 'data_batch_1')
+
 mosaic = Mosaic(image_in_location, image_out_location, dataset_location)
 
 start_time = time.time()

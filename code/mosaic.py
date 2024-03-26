@@ -1,8 +1,10 @@
 from PIL import Image, ImageOps # Python Imaging Library
 import numpy as np # Numpy for numerical operations
+import os
 import glob # For file handling
 from scipy import spatial # For KDTree
 import random
+import pickle
 
 class Mosaic:
     """ Class for photomosaic building
@@ -60,16 +62,27 @@ class Mosaic:
     def load_dataset(self):
         """Load dataset"""
 
-        self.images = []
-        for file in glob.glob(self.dataset_location):
-            image = self.load_image(file)
-            self.images.append(image)
+        if (os.path.basename(self.dataset_location) == '*'):
 
-        self.images = [i for i in self.images if i.ndim==3] ## Remove any non color images
-        self.images = [self.resize_image(Image.fromarray(i), self.mosaic_size) \
-            for i in self.images] ## Resize images to the tile size
+            self.images = []
+            for file in glob.glob(self.dataset_location):
+                image = self.load_image(file)
+                self.images.append(image)
 
-        self.images_array = np.asarray(self.images)
+            self.images = [i for i in self.images if i.ndim==3] ## Remove any non color images
+            self.images = [self.resize_image(Image.fromarray(i), self.mosaic_size) \
+                for i in self.images] ## Resize images to the tile size
+
+            self.images_array = np.asarray(self.images)
+
+        # else:
+        #     with open(self.dataset_location, 'rb') as fo:
+        #         dict = pickle.load(fo, encoding='bytes')
+        #     self.images_array = dict[b'data']
+        #     np.reshape(self.images_array, (10000, 32, 32, 3))
+        #     print(self.images_array.shape)
+
+        
 
     def process_dataset(self):
         """Compute criteria for every image from the dataset
