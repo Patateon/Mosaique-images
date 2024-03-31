@@ -1,6 +1,6 @@
 from PIL import Image, ImageOps # Python Imaging Library
 import numpy as np # Numpy for numerical operations
-import os
+import os # For path handling
 import glob # For file handling
 from scipy import spatial # For KDTree
 import random
@@ -16,7 +16,7 @@ class Mosaic:
 
     def __init__(self, image_in_location: str, image_out_location: str, \
                 dataset_location: str, fast: bool = False,\
-                target_res=(200, 80), mosaic_size=(32, 32),):
+                target_res=(50, 50), mosaic_size=(32, 32),):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
         image_out_location -> Path to the mosaic in output.
@@ -183,6 +183,10 @@ class Mosaic:
             for j in range(self.target_res[1]):
                 
                 template = self.mosaic_template[i, j]
+                
+                # Ensure template is of length 3 (RGB) and not 4 (RGBA)
+                if len(template) == 4:
+                    template = template[:3]
                 
                 if (self.fast):
                     self.match_fast(i, j, template)                
