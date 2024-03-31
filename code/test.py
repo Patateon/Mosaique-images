@@ -7,7 +7,7 @@ from mosaic import *
 
 CWD = os.getcwd()
 
-image_in_location = os.path.join(CWD, 'images_test', 'ImgTest.jpg')
+image_in_location = os.path.join(CWD, 'images_test', 'chat.png')
 image_out_location = os.path.join(CWD, 'images_test', 'result.jpg')
 dataset_location = os.path.join(CWD, 'dataset', \
     'DIV2K_train_LR_bicubic', 'X2', '*')
