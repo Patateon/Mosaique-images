@@ -152,14 +152,16 @@ class Mosaic:
                 else:
                     found = False
                     depth = 10
+                    cnt = 0
                     while not found:
                         match = self.tree.query(template, p=1, k=depth)
-                        for k in range(0, depth):
+                        for k in range(cnt, depth):
                             if(not flag[match[1][k]]):
                                 flag[match[1][k]] = 1
                                 self.image_index[i, j] = match[1][k]
                                 found = True
                                 k = depth
+                        cnt = depth
                         depth += 1
 
 
