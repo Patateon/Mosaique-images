@@ -35,6 +35,7 @@ class Application(tk.Tk):
         self.log.set("En attente")
 
         self.fast_b = tk.IntVar()
+        self.show_advanced = False
 
         ## Button to access input image, output image
         # and dataset
@@ -57,6 +58,8 @@ class Application(tk.Tk):
             text='Parcourir...', command=self.save_file)
         button_data_location = tk.Button(main_frame,\
             text='Parcourir...', command=self.open_dir)
+        button_advanced = tk.Button(main_frame,\
+            text='Options avancées', command=self.advanced)
 
         button_build_mosaic = tk.Button(main_frame,\
             text='Construire la mosaïque', command=self.photomosaic)
@@ -79,6 +82,8 @@ class Application(tk.Tk):
         button_build_mosaic.grid(row=3, column=2, sticky='ew', pady=5)
 
         checkbox_fast.grid(row=3, column=0, sticky='ew', pady=5)
+        
+        button_advanced.grid(row=4, column=1, sticky='', pady=5)
 
         self.main_frame = main_frame
         main_frame.pack()
@@ -129,6 +134,39 @@ class Application(tk.Tk):
         self.text_out.delete(0, 'end')
         self.text_out.insert(0, path)
 
+    def advanced(self):
+        """Show/Unshow the advanced options"""
+
+        self.show_advanced = not self.show_advanced
+        if self.show_advanced:
+            self.res_x = tk.Label(self.main_frame, text="Résolution X")
+            self.res_y = tk.Label(self.main_frame, text="Résolution Y")
+            self.size_x = tk.Label(self.main_frame, text="Taille Mosaïc X")
+            self.size_y = tk.Label(self.main_frame, text="Taille Mosaïc Y")
+            
+            self.text_res_x = tk.Entry(self.main_frame, width=5)
+            self.text_res_y = tk.Entry(self.main_frame, width=5)
+            self.text_size_x = tk.Entry(self.main_frame, width=5)
+            self.text_size_y = tk.Entry(self.main_frame, width=5)
+            
+            self.res_x.grid(row=5, column=0, sticky='ew', pady=5)
+            self.text_res_x.grid(row=5, column=1, sticky='ew', pady=5)
+            self.res_y.grid(row=5, column=2, sticky='ew', pady=5)
+            self.text_res_y.grid(row=5, column=3, sticky='ew', pady=5)
+            self.size_x.grid(row=6, column=0, sticky='ew', pady=5)
+            self.text_size_x.grid(row=6, column=1, sticky='ew', pady=5)
+            self.size_y.grid(row=6, column=2, sticky='ew', pady=5)
+            self.text_size_y.grid(row=6, column=3, sticky='ew', pady=5)
+        else:
+            self.text_res_x.destroy()
+            self.text_res_y.destroy()
+            self.text_size_x.destroy()
+            self.text_size_y.destroy()
+            self.res_x.destroy()
+            self.res_y.destroy()
+            self.size_x.destroy()
+            self.size_y.destroy()
+            
 
     def initialize_mosaic(self):
         """Create an instance of mosaic with 
@@ -144,7 +182,16 @@ class Application(tk.Tk):
         if (os.path.basename(self.text_data.get()) != 'cifar-10-batches-py'):
             data_location = os.path.join(data_location, '*')
 
-        self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
+        # Get resolution & mosaic size values
+        if self.show_advanced:
+            res_x = self.text_res_x.get()
+            res_y = self.text_res_y.get()
+            size_x = self.text_size_x.get()
+            size_y = self.text_size_y.get()
+            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get(), \
+                                        target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
+        else:
+            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
 
     def dataset(self):
         """Process the datast"""
@@ -156,11 +203,15 @@ class Application(tk.Tk):
 
         self.log.set("Contruction de la mosaïque en cours...")
         self.update()
-        self.initialize_mosaic()
-        
-        self.dataset()
-
-        self.mosaic.build_mosaic()
+        try:
+            self.initialize_mosaic()
+            self.dataset()
+            self.mosaic.build_mosaic()
+        except Exception as e:
+            self.log.set("Erreur lors de l'initialisation de la mosaïque, vérifiez les chemins")
+            print(e)
+            return
+            
         self.log.set("Contruction terminée !")
         self.show_result()
         
@@ -172,7 +223,7 @@ class Application(tk.Tk):
         img = ImageTk.PhotoImage(resized)
         self.panel = tk.Label(self.main_frame, image=img)
         self.panel.image = img  # Keep a reference to prevent garbage collection
-        self.panel.grid(row=4, column=1, sticky='', pady=5)
+        self.panel.grid(row=7, column=1, sticky='', pady=5)
         self.update()
 
 if __name__ == "__main__":
