@@ -16,7 +16,7 @@ class Mosaic:
 
     def __init__(self, image_in_location: str, image_out_location: str, \
                 dataset_location: str, fast: bool = False,\
-                target_res=(100, 80), mosaic_size=(32, 32),):
+                target_res=(200, 80), mosaic_size=(32, 32),):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
         image_out_location -> Path to the mosaic in output.
@@ -35,14 +35,23 @@ class Mosaic:
         self.fast = True
 
         self.image_in = self.load_image(image_in_location)
-        self.width = self.image_in.shape[0]
-        self.height = self.image_in.shape[1]
+        self.height = self.image_in.shape[0]
+        self.width = self.image_in.shape[1]
         
+        # self.compute_targeted_resolution()
+
         ## Create a mosaic template 
         self.mosaic_template = \
             self.image_in[:: (self.height // self.target_res[0]), \
-            :: (self.height // self.target_res[1])]
+            :: (self.width // self.target_res[1])]
 
+    
+    def compute_targeted_resolution(self):
+        """ Compute target res from a give target res height """
+
+        target_res_h = self.target_res[0]
+        target_res_w = (self.height * self.target_res[0]) // self.width
+        self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
         ''' Opens an image from specified source and 
