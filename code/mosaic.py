@@ -15,7 +15,8 @@ class Mosaic:
     """
 
     def __init__(self, image_in_location: str, image_out_location: str, \
-        dataset_location: str, target_res=(50, 50), mosaic_size=(32, 32)):
+                dataset_location: str, fast: bool = False,\
+                target_res=(50, 50), mosaic_size=(32, 32),):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
         image_out_location -> Path to the mosaic in output.
@@ -31,7 +32,7 @@ class Mosaic:
         self.mosaic_size = mosaic_size
         self.images = None
         self.tree = None
-        self.fast = False
+        self.fast = fast
 
         self.image_in = self.load_image(image_in_location)
         self.width = self.image_in.shape[0]
@@ -127,6 +128,33 @@ class Mosaic:
         self.tree = spatial.KDTree(image_values)
 
 
+    def match_fast(self, i: int, j: int, template: list):
+        """ Fast match but tile can repeat"""
+    
+        match = self.tree.query(template, p=1, k=40)
+
+        pick = random.randint(0, 39)
+        self.image_index[i, j] = match[1][pick]
+
+    
+    def match_slow(self, i: int, j: int, template: list, flag: np.ndarray):
+        """ Slow match but tile can't repeat """
+        
+        found = False
+        depth = 10
+        cnt = 0
+        while not found:
+            match = self.tree.query(template, p=1, k=depth)
+            for k in range(cnt, depth):
+                if(not flag[match[1][k]]):
+                    flag[match[1][k]] = 1
+                    self.image_index[i, j] = match[1][k]
+                    found = True
+                    k = depth
+            cnt = depth
+            depth += 1
+
+
     def match_blocks(self):
         """Perform a matching"""
 
@@ -144,25 +172,9 @@ class Mosaic:
                 template = self.mosaic_template[i, j]
                 
                 if (self.fast):
-                    match = self.tree.query(template, p=1, k=40)
-
-                    pick = random.randint(0, 39)
-                    self.image_index[i, j] = match[1][pick]
-                
+                    self.match_fast(i, j, template)                
                 else:
-                    found = False
-                    depth = 10
-                    cnt = 0
-                    while not found:
-                        match = self.tree.query(template, p=1, k=depth)
-                        for k in range(cnt, depth):
-                            if(not flag[match[1][k]]):
-                                flag[match[1][k]] = 1
-                                self.image_index[i, j] = match[1][k]
-                                found = True
-                                k = depth
-                        cnt = depth
-                        depth += 1
+                    self.match_slow(i, j, template, flag)
 
 
     def build_mosaic(self):

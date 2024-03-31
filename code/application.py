@@ -34,6 +34,8 @@ class Application(tk.Tk):
         self.log = tk.StringVar()
         self.log.set("En attente")
 
+        self.fast_b = tk.IntVar()
+
         ## Button to access input image, output image
         # and dataset
         label_in = tk.Label(main_frame, text='Image en entrée')
@@ -59,6 +61,9 @@ class Application(tk.Tk):
         button_build_mosaic = tk.Button(main_frame,\
             text='Construire la mosaïque', command=self.photomosaic)
 
+        checkbox_fast = tk.Checkbutton(main_frame, text='Rapide',\
+            variable=self.fast_b, onvalue=1, offvalue=0)
+
         label_in.grid(row=0, column=0, sticky='ew', pady=5)
         label_out.grid(row=1, column=0, sticky='ew', pady=5)
         label_data.grid(row=2, column=0, sticky='ew', pady=5)
@@ -72,6 +77,8 @@ class Application(tk.Tk):
         button_out_location.grid(row=1, column=2, sticky='ew', pady=5)
         button_data_location.grid(row=2, column=2, sticky='ew', pady=5)
         button_build_mosaic.grid(row=3, column=2, sticky='ew', pady=5)
+
+        checkbox_fast.grid(row=3, column=0, sticky='ew', pady=5)
 
         self.main_frame = main_frame
         main_frame.pack()
@@ -122,6 +129,7 @@ class Application(tk.Tk):
         self.text_out.delete(0, 'end')
         self.text_out.insert(0, path)
 
+
     def initialize_mosaic(self):
         """Create an instance of mosaic with 
         path in entries
@@ -136,7 +144,7 @@ class Application(tk.Tk):
         if (os.path.basename(self.text_data.get()) != 'cifar-10-batches-py'):
             data_location = os.path.join(data_location, '*')
 
-        self.mosaic = mosaic.Mosaic(in_location, out_location, data_location)
+        self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
 
     def dataset(self):
         """Process the datast"""
