@@ -16,7 +16,7 @@ class Mosaic:
 
     def __init__(self, image_in_location: str, image_out_location: str, \
                 dataset_location: str, fast: bool = False,\
-                target_res=(50, 50), mosaic_size=(32, 32),):
+                target_res=(100, 80), mosaic_size=(32, 32),):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
         image_out_location -> Path to the mosaic in output.
@@ -32,12 +32,12 @@ class Mosaic:
         self.mosaic_size = mosaic_size
         self.images = None
         self.tree = None
-        self.fast = fast
+        self.fast = True
 
         self.image_in = self.load_image(image_in_location)
         self.width = self.image_in.shape[0]
         self.height = self.image_in.shape[1]
-
+        
         ## Create a mosaic template 
         self.mosaic_template = \
             self.image_in[:: (self.height // self.target_res[0]), \
@@ -141,11 +141,15 @@ class Mosaic:
         """ Slow match but tile can't repeat """
         
         found = False
-        depth = 10
-        cnt = 0
+        depth = 10  ## Depht of the search
+        cnt = 0 ## Counter for the search
+        
         while not found:
             match = self.tree.query(template, p=1, k=depth)
+            
             for k in range(cnt, depth):
+                ## If the image is not already used
+                ## use it and break the loop
                 if(not flag[match[1][k]]):
                     flag[match[1][k]] = 1
                     self.image_index[i, j] = match[1][k]
@@ -193,15 +197,15 @@ class Mosaic:
 
         ## Create a new image to store the final mosaic
         self.image_out = Image.new('RGB', \
-            (self.mosaic_size[0] * self.target_res[0], \
-            self.mosaic_size[1] * self.target_res[1]))
+            (self.mosaic_size[1] * self.target_res[1], \
+            self.mosaic_size[0] * self.target_res[0]))
 
        ## For each pixel in the mosaic, 
        # paste the corresponding image from the dataset
         for i in range(self.target_res[0]):
             for j in range(self.target_res[1]):
-                tile = self.images[self.image_index[j, i]]
-                x, y = i * self.mosaic_size[0], j * self.mosaic_size[1]
+                tile = self.images[self.image_index[i, j]]
+                x, y = j * self.mosaic_size[1], i * self.mosaic_size[0]
                 image = Image.fromarray(tile)
                 self.image_out.paste(image, (x,y))
 
