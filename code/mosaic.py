@@ -15,7 +15,7 @@ class Mosaic:
     """
 
     def __init__(self, image_in_location: str, image_out_location: str, \
-        dataset_location: str, target_res=(100, 100), mosaic_size=(32, 32)):
+        dataset_location: str, target_res=(50, 50), mosaic_size=(32, 32)):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
         image_out_location -> Path to the mosaic in output.
@@ -29,7 +29,9 @@ class Mosaic:
         self.dataset_location = dataset_location
         self.target_res = target_res
         self.mosaic_size = mosaic_size
+        self.images = None
         self.tree = None
+        self.fast = False
 
         self.image_in = self.load_image(image_in_location)
         self.width = self.image_in.shape[0]
@@ -50,6 +52,7 @@ class Mosaic:
             array = np.asarray(source)
         return array
 
+
     def resize_image(self, image: Image, size: tuple) -> np.ndarray:
         '''Takes an image and resizes to a given size (width, height) 
         as passed to the size parameter 
@@ -59,30 +62,54 @@ class Mosaic:
             centering=(0.5, 0.5))
         return np.array(resized_image)
 
+
+    def load_cifar(self):
+        """ Load cifat10 dataset in self.images attributs """
+
+        for i in range(1, 6):   
+            current_batch = os.path.join(self.dataset_location, "data_batch_{}".format(i))         
+            with open(current_batch, 'rb') as fo:
+                dict = pickle.load(fo, encoding='bytes')
+                im_arr = np.moveaxis(dict[b'data'].reshape(10000, 3, 32, 32), 1, -1)
+                if (i == 1):
+                    self.images = im_arr
+                else:
+                    self.images = np.vstack((self.images, im_arr))
+
+        current_batch = os.path.join(self.dataset_location, "test_batch")
+        with open(current_batch, 'rb') as fo:
+            dict = pickle.load(fo, encoding='bytes')
+            im_arr = np.moveaxis(dict[b'data'].reshape(10000, 3, 32, 32), 1, -1)
+            self.images = np.vstack((self.images, im_arr))
+
+
+    def load_from_dir(self):
+        """ Load every images from a folder, resize them and
+        put them in self.images attributs
+
+        ! Way slower than load_cifar
+        """
+
+        self.images = []
+        for file in glob.glob(self.dataset_location):
+            image = self.load_image(file)
+            self.images.append(image)
+
+        self.images = [i for i in self.images if i.ndim==3] ## Remove any non color images
+        self.images = [self.resize_image(Image.fromarray(i), self.mosaic_size) \
+            for i in self.images] ## Resize images to the tile size
+
+        self.images = np.asarray(self.images)  
+
+
     def load_dataset(self):
         """Load dataset"""
 
-        if (os.path.basename(self.dataset_location) == '*'):
+        if(os.path.basename(self.dataset_location) == 'cifar-10-batches-py'):
+            self.load_cifar()
+        else:
+            self.load_from_dir()
 
-            self.images = []
-            for file in glob.glob(self.dataset_location):
-                image = self.load_image(file)
-                self.images.append(image)
-
-            self.images = [i for i in self.images if i.ndim==3] ## Remove any non color images
-            self.images = [self.resize_image(Image.fromarray(i), self.mosaic_size) \
-                for i in self.images] ## Resize images to the tile size
-
-            self.images_array = np.asarray(self.images)
-
-        # else:
-        #     with open(self.dataset_location, 'rb') as fo:
-        #         dict = pickle.load(fo, encoding='bytes')
-        #     self.images_array = dict[b'data']
-        #     np.reshape(self.images_array, (10000, 32, 32, 3))
-        #     print(self.images_array.shape)
-
-        
 
     def process_dataset(self):
         """Compute criteria for every image from the dataset
@@ -93,11 +120,12 @@ class Mosaic:
         self.load_dataset()
 
         ## Use mean as a criteria
-        image_values = np.apply_over_axes(np.mean, self.images_array, [1, 2])\
-            .reshape(len(self.images), 3)
+        image_values = np.apply_over_axes(np.mean, self.images, [1, 2])\
+            .reshape(self.images.shape[0], 3)
 
         ## Create a KDTree for the image values
         self.tree = spatial.KDTree(image_values)
+
 
     def match_blocks(self):
         """Perform a matching"""
@@ -106,6 +134,8 @@ class Mosaic:
         # to use for each pixel in the mosaic.
         self.image_index = np.zeros(self.target_res, dtype=np.uint32) 
 
+        flag = np.zeros(self.images.shape[0])
+
         ## For each pixel in the mosaic template, 
         # find the closest match in the dataset and store the index
         for i in range(self.target_res[0]):
@@ -113,9 +143,25 @@ class Mosaic:
                 
                 template = self.mosaic_template[i, j]
                 
-                match = self.tree.query(template, k=40)
-                pick = random.randint(0, 39)
-                self.image_index[i, j] = match[1][pick]
+                if (self.fast):
+                    match = self.tree.query(template, p=1, k=40)
+
+                    pick = random.randint(0, 39)
+                    self.image_index[i, j] = match[1][pick]
+                
+                else:
+                    found = False
+                    depth = 10
+                    while not found:
+                        match = self.tree.query(template, p=1, k=depth)
+                        for k in range(0, depth):
+                            if(not flag[match[1][k]]):
+                                flag[match[1][k]] = 1
+                                self.image_index[i, j] = match[1][k]
+                                found = True
+                                k = depth
+                        depth += 1
+
 
     def build_mosaic(self):
         """Build mosaic"""

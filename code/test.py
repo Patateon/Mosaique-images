@@ -13,7 +13,7 @@ dataset_location = os.path.join(CWD, 'dataset', \
     'DIV2K_train_LR_bicubic', 'X2', '*')
 
 dataset_location = os.path.join(CWD, 'dataset', \
-    'cifar-10-batches-py', 'data_batch_1')
+    'cifar-10-batches-py')
 
 mosaic = Mosaic(image_in_location, image_out_location, dataset_location)
 

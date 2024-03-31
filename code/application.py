@@ -22,6 +22,13 @@ class Application(tk.Tk):
         self.rowconfigure(0, minsize=800, weight=1)
         self.columnconfigure(1, minsize=800, weight=1)
         
+        # Initialize the main frame 
+        self.scene_initializer()
+
+
+    def scene_initializer(self):
+        """ Load a main frame in the ugliest way possible """
+
         main_frame = tk.Frame(self)
 
         self.log = tk.StringVar()
@@ -37,6 +44,10 @@ class Application(tk.Tk):
         self.text_in = tk.Entry(main_frame, width=79)
         self.text_out = tk.Entry(main_frame, width=79)
         self.text_data = tk.Entry(main_frame, width=79)
+
+        # Path par défaut
+        self.text_data.insert(0, \
+            os.path.join('dataset', 'cifar-10-batches-py'))
 
         button_in_location = tk.Button(main_frame,\
             text='Parcourir...', command=self.open_file)
@@ -79,7 +90,7 @@ class Application(tk.Tk):
         if not path:
             return
 
-        self.text_in.select_clear()
+        self.text_in.delete(0, 'end')
         self.text_in.insert(0, path)
         
     def open_dir(self):
@@ -90,7 +101,7 @@ class Application(tk.Tk):
         if not path:
             return
 
-        self.text_data.select_clear()
+        self.text_data.delete(0, 'end')
         self.text_data.insert(0, path)
 
 
@@ -108,7 +119,7 @@ class Application(tk.Tk):
         if not path:
             return
 
-        self.text_out.select_clear()
+        self.text_out.delete(0, 'end')
         self.text_out.insert(0, path)
 
     def initialize_mosaic(self):
@@ -117,8 +128,13 @@ class Application(tk.Tk):
         """
         in_location = self.text_in.get()
         out_location = self.text_out.get()
-        data_location = os.path.join(self.text_data.get(), '*')
+        data_location = self.text_data.get()
+
         print(data_location)
+
+        # Ignoble mais c'est pour vérifier si load cifar 10 ou un dossier
+        if (os.path.basename(self.text_data.get()) != 'cifar-10-batches-py'):
+            data_location = os.path.join(data_location, '*')
 
         self.mosaic = mosaic.Mosaic(in_location, out_location, data_location)
 
