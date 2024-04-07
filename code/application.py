@@ -1,5 +1,6 @@
 # Standard lib
 import os
+import time
 
 # Interface lib
 import tkinter as tk
@@ -204,9 +205,11 @@ class Application(tk.Tk):
         self.log.set("Contruction de la mosaïque en cours...")
         self.update()
         try:
+            start = time.time()
             self.initialize_mosaic()
             self.dataset()
             self.mosaic.build_mosaic()
+            print("Time taken : " + str(time.time() - start)[:4] + " s")
         except Exception as e:
             self.log.set("Erreur lors de l'initialisation de la mosaïque, vérifiez les chemins")
             print(e)

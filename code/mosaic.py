@@ -32,7 +32,7 @@ class Mosaic:
         self.mosaic_size = mosaic_size
         self.images = None
         self.tree = None
-        self.fast = True
+        self.fast = fast
 
         self.image_in = self.load_image(image_in_location)
         self.height = self.image_in.shape[0]
@@ -150,7 +150,7 @@ class Mosaic:
         """ Slow match but tile can't repeat """
         
         found = False
-        depth = 10  ## Depht of the search
+        depth = 2  ## Depht of the search
         cnt = 0 ## Counter for the search
         
         while not found:
