@@ -7,8 +7,8 @@ from mosaic import *
 
 CWD = os.getcwd()
 
-image_in_location = os.path.join(CWD, 'images_test', 'chat.png')
-image_out_location = os.path.join(CWD, 'images_test', 'result.jpg')
+image_in_location = os.path.join(CWD, 'images_test', 'VidTest.mp4')
+image_out_location = os.path.join(CWD, 'images_test', 'VidResult.mp4')
 dataset_location = os.path.join(CWD, 'dataset', \
     'DIV2K_train_LR_bicubic', 'X2', '*')
 
@@ -25,7 +25,7 @@ mosaic.process_dataset()
 
 print('Finding matches...')
 
-mosaic.build_mosaic()
+mosaic.mosaic_video()
 
 print('Mosaic created')
 print('Time taken:', round(time.time()-start_time, 2), "seconds")
