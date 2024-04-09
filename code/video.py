@@ -3,10 +3,11 @@ import numpy as np # Numpy for numerical operations
 import os # For path handling
 import glob # For file handling
 from scipy import spatial # For KDTree
+import cv2 # For video handling
 import random
 import pickle
 
-class Mosaic:
+class Video:
     """ Class for photomosaic building
     Contruct a mosaic objet
     1- Use process_dataset() to treat and compute criteria from the dataset
@@ -33,15 +34,10 @@ class Mosaic:
         self.images = None
         self.tree = None
         self.fast = fast
-        
-        self.image_in = self.load_image(image_in_location)
-        self.height = self.image_in.shape[0]
-        self.width = self.image_in.shape[1]
-        
-        ## Create a mosaic template 
-        self.mosaic_template = \
-        self.image_in[:: (self.height // self.target_res[0]), \
-        :: (self.width // self.target_res[1])]
+
+        self.divide_video()
+        self.mosaic_template = self.buffer[0][:: (self.frameHeight // self.target_res[0]), \
+            :: (self.frameWidth // self.target_res[1])]
         
         # self.compute_targeted_resolution()
 
@@ -49,10 +45,13 @@ class Mosaic:
     
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """
-        
-        target_res_h = self.target_res[0]
-        target_res_w = (self.height * self.target_res[0]) // self.width
-        self.target_res = (target_res_w, target_res_h)
+
+        if self.video:
+            self.target_res = (self.frameHeight // self.mosaic_size[0], self.frameWidth // self.mosaic_size[1])
+        else:
+            target_res_h = self.target_res[0]
+            target_res_w = (self.height * self.target_res[0]) // self.width
+            self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
         ''' Opens an image from specified source and 
@@ -62,16 +61,6 @@ class Mosaic:
         with Image.open(source) as source:
             array = np.asarray(source)
         return array
-
-
-    def resize_image(self, image: Image, size: tuple) -> np.ndarray:
-        '''Takes an image and resizes to a given size (width, height) 
-        as passed to the size parameter 
-        '''
-        
-        resized_image = ImageOps.fit(image, size, Image.LANCZOS, \
-            centering=(0.5, 0.5))
-        return np.array(resized_image)
 
 
     def load_cifar(self):
@@ -193,6 +182,59 @@ class Mosaic:
                     self.match_fast(i, j, template)                
                 else:
                     self.match_slow(i, j, template, flag)
+                    
+    def divide_video(self):
+        """Divide video into frames and store them in a numpy array"""
+        
+        # Get video properties
+        cap = cv2.VideoCapture(self.image_in_location)
+        self.frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+        self.target_res = (self.frameHeight // self.mosaic_size[0], self.frameWidth // self.mosaic_size[1])
+        
+        # Create buffer to store frames
+        self.buffer = np.empty((self.frameCount, self.frameHeight, self.frameWidth, 3), np.dtype('uint8'))
+        i = 0
+        # Read every frames
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+            if ret:
+                self.buffer[i] = frame
+                i += 1
+            else:
+                break
+        cap.release()
+
+    def mosaic_video(self):
+        """Make a mosaic video from a video input"""
+        
+        # video output
+        self.video_out = np.empty((self.frameCount, self.mosaic_size[0] * self.target_res[0], self.mosaic_size[1] * self.target_res[1], 3), np.dtype('uint8'))
+        
+        # For each frame in the video
+        for i in range(self.frameCount):
+            self.image_in = self.buffer[i]
+            self.build_mosaic() ## Build mosaic for the frame
+            self.video_out[i] = self.image_out ## Store the mosaic in the buffer
+        
+        ## Build video from frames
+        self.build_video()
+    
+    def build_video(self):
+        """Build video from frames"""
+        
+        # Define the codec and create VideoWriter object
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(self.image_out_location, fourcc, self.fps, (self.mosaic_size[1] * self.target_res[1], self.mosaic_size[0] * self.target_res[0]))
+        
+        # Write every frame in the output video
+        for i in range(self.frameCount):
+            out.write(self.video_out[i])
+        
+        out.release()
+        cv2.destroyAllWindows()
         
     def build_mosaic(self):
         """Build mosaic"""
@@ -209,9 +251,10 @@ class Mosaic:
         self.match_blocks()
 
         ## Create a new image to store the final mosaic
+        #self.image_out = Image.fromarray(np.zeros((self.frameHeight, self.frameWidth, 3), np.uint8))
         self.image_out = Image.new('RGB', \
-                (self.mosaic_size[1] * self.target_res[1], \
-                self.mosaic_size[0] * self.target_res[0]))
+            (self.mosaic_size[1] * self.target_res[1], \
+            self.mosaic_size[0] * self.target_res[0]))
 
        ## For each pixel in the mosaic, 
        # paste the corresponding image from the dataset
@@ -221,7 +264,4 @@ class Mosaic:
                 x, y = j * self.mosaic_size[1], i * self.mosaic_size[0]
                 image = Image.fromarray(tile)
                 self.image_out.paste(image, (x,y))
-
-        ## Write image in output
-        self.image_out.save(self.image_out_location)   
 
