@@ -8,7 +8,7 @@ import random
 import pickle
 
 class Video:
-    """ Class for photomosaic building
+    """ Class for videomosaic building
     Contruct a mosaic objet
     1- Use process_dataset() to treat and compute criteria from the dataset
     2- Use build_mosaic() to perform matching with the image in input
@@ -36,22 +36,15 @@ class Video:
         self.fast = fast
 
         self.divide_video()
-        self.mosaic_template = self.buffer[0][:: (self.frameHeight // self.target_res[0]), \
-            :: (self.frameWidth // self.target_res[1])]
         
         # self.compute_targeted_resolution()
-
-
     
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """
-
-        if self.video:
-            self.target_res = (self.frameHeight // self.mosaic_size[0], self.frameWidth // self.mosaic_size[1])
-        else:
-            target_res_h = self.target_res[0]
-            target_res_w = (self.height * self.target_res[0]) // self.width
-            self.target_res = (target_res_w, target_res_h)
+        
+        target_res_h = self.target_res[0]
+        target_res_w = (self.frameHeight * self.target_res[0]) // self.width
+        self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
         ''' Opens an image from specified source and 
@@ -192,6 +185,7 @@ class Video:
         self.frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+        ## low target res to avoid long computation
         self.target_res = (self.frameHeight // self.mosaic_size[0], self.frameWidth // self.mosaic_size[1])
         
         # Create buffer to store frames
@@ -216,6 +210,9 @@ class Video:
         # For each frame in the video
         for i in range(self.frameCount):
             self.image_in = self.buffer[i]
+            self.mosaic_template = \
+            self.image_in[:: (self.frameHeight // self.target_res[0]), \
+            :: (self.frameWidth // self.target_res[1])]
             self.build_mosaic() ## Build mosaic for the frame
             self.video_out[i] = self.image_out ## Store the mosaic in the buffer
         
@@ -251,7 +248,6 @@ class Video:
         self.match_blocks()
 
         ## Create a new image to store the final mosaic
-        #self.image_out = Image.fromarray(np.zeros((self.frameHeight, self.frameWidth, 3), np.uint8))
         self.image_out = Image.new('RGB', \
             (self.mosaic_size[1] * self.target_res[1], \
             self.mosaic_size[0] * self.target_res[0]))
