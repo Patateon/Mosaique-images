@@ -11,12 +11,12 @@ class Video:
     """ Class for videomosaic building
     Contruct a mosaic objet
     1- Use process_dataset() to treat and compute criteria from the dataset
-    2- Use build_mosaic() to perform matching with the image in input
+    2- Use mosaic_frame() to perform matching with the image in input
         and the processed dataset, then build and write a mosaic image
     """
 
     def __init__(self, image_in_location: str, image_out_location: str, \
-                dataset_location: str, fast: bool = False,\
+                dataset_location: str,\
                 target_res=(50, 50), mosaic_size=(32, 32)):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
@@ -33,17 +33,15 @@ class Video:
         self.mosaic_size = mosaic_size
         self.images = None
         self.tree = None
-        self.fast = fast
 
         self.divide_video()
         
-        # self.compute_targeted_resolution()
     
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """
         
         target_res_h = self.target_res[0]
-        target_res_w = (self.frameHeight * self.target_res[0]) // self.width
+        target_res_w = (self.frameHeight * self.target_res[0]) // self.frameWidth
         self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
@@ -120,35 +118,14 @@ class Video:
         self.tree = spatial.KDTree(image_values)
 
 
-    def match_fast(self, i: int, j: int, template: list):
+    def match(self, i: int, j: int, template: list):
         """ Fast match but tile can repeat"""
     
         match = self.tree.query(template, p=1, k=40)
 
-        pick = random.randint(0, 39)
-        self.image_index[i, j] = match[1][pick]
-
-    
-    def match_slow(self, i: int, j: int, template: list, flag: np.ndarray):
-        """ Slow match but tile can't repeat """
-        
-        found = False
-        depth = 2  ## Depht of the search
-        cnt = 0 ## Counter for the search
-        
-        while not found:
-            match = self.tree.query(template, p=1, k=depth)
-            
-            for k in range(cnt, depth):
-                ## If the image is not already used
-                ## use it and break the loop
-                if(not flag[match[1][k]]):
-                    flag[match[1][k]] = 1
-                    self.image_index[i, j] = match[1][k]
-                    found = True
-                    k = depth
-            cnt = depth
-            depth += 1
+        ## pick = random.randint(0, 39)
+        ## self.image_index[i, j] = match[1][pick]
+        self.image_index[i, j] = match[1][0] ## Always pick the closest match
 
 
     def match_blocks(self):
@@ -157,8 +134,6 @@ class Video:
         ## Create an empty array to store the index of the image 
         # to use for each pixel in the mosaic.
         self.image_index = np.zeros(self.target_res, dtype=np.uint32) 
-
-        flag = np.zeros(self.images.shape[0])
 
         ## For each pixel in the mosaic template, 
         # find the closest match in the dataset and store the index
@@ -171,10 +146,37 @@ class Video:
                 if len(template) == 4:
                     template = template[:3]
                 
-                if (self.fast):
-                    self.match_fast(i, j, template)                
-                else:
-                    self.match_slow(i, j, template, flag)
+                self.match(i, j, template)     
+                
+    def mosaic_frame(self):
+        """Build mosaic"""
+
+        if self.images is None:
+            print("Need to load dataset")
+            exit()
+
+        if self.tree is None:
+            print("Need to compute criteria")
+            exit()
+
+        ## Match tiles with images from the dataset
+        self.match_blocks()
+
+        ## Create a new image to store the final mosaic
+        frame = Image.new('RGB', \
+            (self.mosaic_size[1] * self.target_res[1], \
+            self.mosaic_size[0] * self.target_res[0]))
+
+       ## For each pixel in the mosaic, 
+       # paste the corresponding image from the dataset
+        for i in range(self.target_res[0]):
+            for j in range(self.target_res[1]):
+                tile = self.images[self.image_index[i, j]]
+                x, y = j * self.mosaic_size[1], i * self.mosaic_size[0]
+                image = Image.fromarray(tile)
+                frame.paste(image, (x,y))
+                
+        return frame           
                     
     def divide_video(self):
         """Divide video into frames and store them in a numpy array"""
@@ -185,8 +187,8 @@ class Video:
         self.frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
-        ## low target res to avoid long computation
-        self.target_res = (self.frameHeight // self.mosaic_size[0], self.frameWidth // self.mosaic_size[1])
+        
+        self.compute_targeted_resolution()
         
         # Create buffer to store frames
         self.buffer = np.empty((self.frameCount, self.frameHeight, self.frameWidth, 3), np.dtype('uint8'))
@@ -213,8 +215,8 @@ class Video:
             self.mosaic_template = \
             self.image_in[:: (self.frameHeight // self.target_res[0]), \
             :: (self.frameWidth // self.target_res[1])]
-            self.build_mosaic() ## Build mosaic for the frame
-            self.video_out[i] = self.image_out ## Store the mosaic in the buffer
+            frame = self.mosaic_frame() ## Build mosaic for the frame
+            self.video_out[i] = frame ## Store the mosaic in the buffer
         
         ## Build video from frames
         self.build_video()
@@ -229,35 +231,8 @@ class Video:
         # Write every frame in the output video
         for i in range(self.frameCount):
             out.write(self.video_out[i])
+                
         
         out.release()
         cv2.destroyAllWindows()
-        
-    def build_mosaic(self):
-        """Build mosaic"""
-
-        if self.images is None:
-            print("Need to load dataset")
-            exit()
-
-        if self.tree is None:
-            print("Need to compute criteria")
-            exit()
-
-        ## Match tiles with images from the dataset
-        self.match_blocks()
-
-        ## Create a new image to store the final mosaic
-        self.image_out = Image.new('RGB', \
-            (self.mosaic_size[1] * self.target_res[1], \
-            self.mosaic_size[0] * self.target_res[0]))
-
-       ## For each pixel in the mosaic, 
-       # paste the corresponding image from the dataset
-        for i in range(self.target_res[0]):
-            for j in range(self.target_res[1]):
-                tile = self.images[self.image_index[i, j]]
-                x, y = j * self.mosaic_size[1], i * self.mosaic_size[0]
-                image = Image.fromarray(tile)
-                self.image_out.paste(image, (x,y))
 
