@@ -139,6 +139,39 @@ class Mosaic:
         self.tree = spatial.KDTree(image_values)
 
 
+    def fitness(self, image_A, image_B):
+        return np.sum(image_A - image_B)
+
+    def global_fitness(self, index_array):
+        global_fitness = 0
+
+        for i in range(self.target_res[0]):
+            for j in range(self.target_res[1]):
+                global_fitness += fitness(self.mosaic_template[i, j], self.images[index_array[i*self.target_res[1] + j]])
+    
+    def random_based_matching(self):
+        """ Implement this matching algorithm -> 
+        H. Narasimhan and S. Satheesh, 
+        "A randomized iterative improvement algorithm for photomosaic generation," 
+        2009 World Congress on Nature & Biologically Inspired Computing (NaBIC), 
+        Coimbatore, India, 2009, pp. 777-781, 
+        doi: 10.1109/NABIC.2009.5393882.
+        """
+        rng = numpy.random.default_rng()
+
+        full_size = self.target_res[0] * self.target_res[1]
+        index_array = np.arange(full_size, dtype=np.uint32) 
+        np.random.shuffle(index_array)
+
+        best_index = index_array
+
+        fitness_best_index = global_fitness(best_index)
+
+        while(fitness_best_index > 10000):
+            neighbor = index_array
+            random_tile_idx = rng.integers(full_size)
+
+
     def match_fast(self, i: int, j: int, template: list):
         """ Fast match but tile can repeat"""
     
@@ -178,6 +211,7 @@ class Mosaic:
         self.image_index = np.zeros(self.target_res, dtype=np.uint32) 
 
         flag = np.zeros(self.images.shape[0])
+        print(self.images.shape)
 
         ## For each pixel in the mosaic template, 
         # find the closest match in the dataset and store the index
@@ -194,6 +228,7 @@ class Mosaic:
                     self.match_fast(i, j, template)                
                 else:
                     self.match_slow(i, j, template, flag)
+                    
         
     def build_mosaic(self):
         """Build mosaic"""
