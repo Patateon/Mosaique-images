@@ -15,7 +15,8 @@ class Mosaic:
     """
 
     def __init__(self, image_in_location: str, image_out_location: str, \
-                dataset_location: str, fast: bool = False,\
+                dataset_location: str,\
+                fast: bool = False, auto_resize: bool = True,\
                 target_res=(50, 50), mosaic_size=(32, 32)):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
@@ -33,19 +34,19 @@ class Mosaic:
         self.images = None
         self.tree = None
         self.fast = fast
-        
+        self.auto_resize = auto_resize
+
         self.image_in = self.load_image(image_in_location)
         self.height = self.image_in.shape[0]
         self.width = self.image_in.shape[1]
         
+        if (self.auto_resize):
+            self.compute_targeted_resolution()
         ## Create a mosaic template 
         self.mosaic_template = \
-        self.image_in[:: (self.height // self.target_res[0]), \
-        :: (self.width // self.target_res[1])]
+        self.image_in[:: round(self.height / self.target_res[0]), \
+        :: round(self.width / self.target_res[1])]
         
-        # self.compute_targeted_resolution()
-
-
     
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """

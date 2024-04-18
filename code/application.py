@@ -36,6 +36,7 @@ class Application(tk.Tk):
         self.log.set("En attente")
 
         self.fast_b = tk.IntVar()
+        self.auto_resize = tk.IntVar()
         self.show_advanced = False
 
         ## Button to access input image, output image
@@ -67,6 +68,7 @@ class Application(tk.Tk):
 
         checkbox_fast = tk.Checkbutton(main_frame, text='Rapide',\
             variable=self.fast_b, onvalue=1, offvalue=0)
+
 
         label_in.grid(row=0, column=0, sticky='ew', pady=5)
         label_out.grid(row=1, column=0, sticky='ew', pady=5)
@@ -139,25 +141,39 @@ class Application(tk.Tk):
         """Show/Unshow the advanced options"""
 
         self.show_advanced = not self.show_advanced
+        advanced_frame = tk.Frame(self.main_frame)
+        
         if self.show_advanced:
-            self.res_x = tk.Label(self.main_frame, text="Résolution X")
-            self.res_y = tk.Label(self.main_frame, text="Résolution Y")
-            self.size_x = tk.Label(self.main_frame, text="Taille Mosaïc X")
-            self.size_y = tk.Label(self.main_frame, text="Taille Mosaïc Y")
+            self.res_x = tk.Label(advanced_frame, text="Résolution X")
+            self.res_y = tk.Label(advanced_frame, text="Résolution Y")
+            self.size_x = tk.Label(advanced_frame, text="Taille Mosaïc X")
+            self.size_y = tk.Label(advanced_frame, text="Taille Mosaïc Y")
             
-            self.text_res_x = tk.Entry(self.main_frame, width=5)
-            self.text_res_y = tk.Entry(self.main_frame, width=5)
-            self.text_size_x = tk.Entry(self.main_frame, width=5)
-            self.text_size_y = tk.Entry(self.main_frame, width=5)
+            self.text_res_x = tk.Entry(advanced_frame, width=5)
+            self.text_res_x.insert('end', '50')
+            self.text_res_y = tk.Entry(advanced_frame, width=5)
+            self.text_res_y.insert('end', '50')
+            self.text_size_x = tk.Entry(advanced_frame, width=5)
+            self.text_size_x.insert('end', '32')
+            self.text_size_y = tk.Entry(advanced_frame, width=5)
+            self.text_size_y.insert('end', '32')
+
+            self.checkbox_auto_resize = tk.Checkbutton(self.main_frame, text='Auto resize',\
+                variable=self.auto_resize, onvalue=1, offvalue=0)
+
+            self.res_x.grid(row=0, column=0, sticky='ew', pady=5)
+            self.text_res_x.grid(row=0, column=1, sticky='ew', pady=5)
+            self.res_y.grid(row=0, column=2, sticky='ew', pady=5)
+            self.text_res_y.grid(row=0, column=3, sticky='ew', pady=5)
+
+            self.size_x.grid(row=1, column=0, sticky='ew', pady=5)
+            self.text_size_x.grid(row=1, column=1, sticky='ew', pady=5)
+            self.size_y.grid(row=1, column=2, sticky='ew', pady=5)
+            self.text_size_y.grid(row=1, column=3, sticky='ew', pady=5)
+
+            advanced_frame.grid(row=5, column=1, sticky='ew', pady=5)
+            self.checkbox_auto_resize.grid(row=5, column=0, sticky='ew', pady=5)
             
-            self.res_x.grid(row=5, column=0, sticky='ew', pady=5)
-            self.text_res_x.grid(row=5, column=1, sticky='ew', pady=5)
-            self.res_y.grid(row=5, column=2, sticky='ew', pady=5)
-            self.text_res_y.grid(row=5, column=3, sticky='ew', pady=5)
-            self.size_x.grid(row=6, column=0, sticky='ew', pady=5)
-            self.text_size_x.grid(row=6, column=1, sticky='ew', pady=5)
-            self.size_y.grid(row=6, column=2, sticky='ew', pady=5)
-            self.text_size_y.grid(row=6, column=3, sticky='ew', pady=5)
         else:
             self.text_res_x.destroy()
             self.text_res_y.destroy()
@@ -167,6 +183,8 @@ class Application(tk.Tk):
             self.res_y.destroy()
             self.size_x.destroy()
             self.size_y.destroy()
+            self.checkbox_auto_resize.destroy()
+            advanced_frame.destroy()
             
 
     def initialize_mosaic(self):
@@ -189,7 +207,8 @@ class Application(tk.Tk):
             res_y = self.text_res_y.get()
             size_x = self.text_size_x.get()
             size_y = self.text_size_y.get()
-            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get(), \
+            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location,\
+                                        fast=self.fast_b.get(), auto_resize=self.auto_resize.get(),\
                                         target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
         else:
             self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
@@ -220,13 +239,24 @@ class Application(tk.Tk):
         
     def show_result(self):
         """Show the result image in the interface"""
-        
-        path = Image.open(self.text_out.get())
-        resized = path.resize((400, 400), Image.LANCZOS)
-        img = ImageTk.PhotoImage(resized)
-        self.panel = tk.Label(self.main_frame, image=img)
-        self.panel.image = img  # Keep a reference to prevent garbage collection
-        self.panel.grid(row=7, column=1, sticky='', pady=5)
+        result_frame = tk.Frame(self.main_frame)
+
+        image_in = Image.open(self.text_in.get())
+        image_in = image_in.resize((300, 300), Image.LANCZOS)
+        image_in = ImageTk.PhotoImage(image_in)
+        self.panel1 = tk.Label(result_frame, image=image_in)
+        self.panel1.image = image_in  # Keep a reference to prevent garbage collection
+        self.panel1.grid(row=0, column=0, sticky='', pady=5)
+
+        image_out = Image.open(self.text_out.get())
+        image_out = image_out.resize((300, 300), Image.LANCZOS)
+        image_out = ImageTk.PhotoImage(image_out)
+        self.panel2 = tk.Label(result_frame, image=image_out)
+        self.panel2.image = image_out  # Keep a reference to prevent garbage collection
+        self.panel2.grid(row=0, column=1, sticky='', pady=5)
+
+        result_frame.grid(row=6, column=1, sticky='', pady=5)
+
         self.update()
 
 if __name__ == "__main__":
