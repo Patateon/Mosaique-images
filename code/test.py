@@ -26,7 +26,7 @@ video.process_dataset()
 
 print('Finding matches...')
 
-video.mosaic_video()
+video.build_mosaic()
 
 print('Mosaic created')
 print('Time taken:', round(time.time()-start_time, 2), "seconds")

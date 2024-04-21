@@ -16,7 +16,7 @@ class Video:
     """
 
     def __init__(self, image_in_location: str, image_out_location: str, \
-                dataset_location: str,\
+                dataset_location: str, auto_resize: bool = True,\
                 target_res=(50, 50), mosaic_size=(32, 32)):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
@@ -31,18 +31,19 @@ class Video:
         self.dataset_location = dataset_location
         self.target_res = target_res
         self.mosaic_size = mosaic_size
+        self.auto_resize = auto_resize
         self.images = None
         self.tree = None
-
+        
         self.divide_video()
         
     
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """
         
-        target_res_h = self.target_res[0]
-        target_res_w = (self.frameHeight * self.target_res[0]) // self.frameWidth
-        self.target_res = (target_res_w, target_res_h)
+        #target_res_h = self.target_res[0]
+        #target_res_w = (self.height * self.target_res[0]) // self.width
+        #self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
         ''' Opens an image from specified source and 
@@ -188,8 +189,6 @@ class Video:
         self.frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
         
-        self.compute_targeted_resolution()
-        
         # Create buffer to store frames
         self.buffer = np.empty((self.frameCount, self.frameHeight, self.frameWidth, 3), np.dtype('uint8'))
         i = 0
@@ -203,7 +202,7 @@ class Video:
                 break
         cap.release()
 
-    def mosaic_video(self):
+    def build_mosaic(self):
         """Make a mosaic video from a video input"""
         
         # video output
@@ -213,8 +212,8 @@ class Video:
         for i in range(self.frameCount):
             self.image_in = self.buffer[i]
             self.mosaic_template = \
-            self.image_in[:: (self.frameHeight // self.target_res[0]), \
-            :: (self.frameWidth // self.target_res[1])]
+            self.image_in[:: round(self.frameHeight // self.target_res[0]), \
+            :: round(self.frameWidth // self.target_res[1])]
             frame = self.mosaic_frame() ## Build mosaic for the frame
             self.video_out[i] = frame ## Store the mosaic in the buffer
         

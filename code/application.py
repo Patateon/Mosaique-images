@@ -7,8 +7,9 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 
-# Mosaic lib
+# Mosaic & video lib
 import mosaic
+import video
 
 class Application(tk.Tk):
 
@@ -97,7 +98,7 @@ class Application(tk.Tk):
 
         path = askopenfilename(
             filetypes=[\
-                ('Image Files', '.png .jpg .jpeg .ppm'),\
+                ('Image Files', '.png .jpg .jpeg .ppm .mp4 .webm .mkv .avi .mov .flv .gif'),\
                 ('All Files', '*.*')\
             ]
         )
@@ -126,7 +127,7 @@ class Application(tk.Tk):
         path = asksaveasfilename(
             defaultextension='.png',
             filetypes=[\
-                ('Image Files', '.png .jpg .jpeg .ppm'),\
+                ('Image Files', '.png .jpg .jpeg .ppm .mp4 .webm .mkv .avi .mov .flv .gif'),\
                 ('All Files', '*.*')\
             ],
         )
@@ -200,18 +201,36 @@ class Application(tk.Tk):
         # Ignoble mais c'est pour vérifier si load cifar 10 ou un dossier
         if (os.path.basename(self.text_data.get()) != 'cifar-10-batches-py'):
             data_location = os.path.join(data_location, '*')
-
-        # Get resolution & mosaic size values
-        if self.show_advanced:
-            res_x = self.text_res_x.get()
-            res_y = self.text_res_y.get()
-            size_x = self.text_size_x.get()
-            size_y = self.text_size_y.get()
-            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location,\
-                                        fast=self.fast_b.get(), auto_resize=self.auto_resize.get(),\
-                                        target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
-        else:
-            self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
+    
+        # Video handling 
+        # Common video formats can be optimized to handle all video types
+        video_formats = ('.mp4', '.webm', '.mkv', '.avi', '.mov', '.flv', '.gif') 
+        if in_location.lower().endswith(video_formats):
+            if self.show_advanced:
+                # Get resolution & mosaic size values
+                res_x = self.text_res_x.get()
+                res_y = self.text_res_y.get()
+                size_x = self.text_size_x.get()
+                size_y = self.text_size_y.get()
+                self.mosaic = video.Video(in_location, out_location, data_location,\
+                                            auto_resize=self.auto_resize.get(),\
+                                            target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
+            else:
+                self.mosaic = video.Video(in_location, out_location, data_location)
+        
+        # Image handling
+        else:    
+            # Get resolution & mosaic size values
+            if self.show_advanced:
+                res_x = self.text_res_x.get()
+                res_y = self.text_res_y.get()
+                size_x = self.text_size_x.get()
+                size_y = self.text_size_y.get()
+                self.mosaic = mosaic.Mosaic(in_location, out_location, data_location,\
+                                            fast=self.fast_b.get(), auto_resize=self.auto_resize.get(),\
+                                            target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
+            else:
+                self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
 
     def dataset(self):
         """Process the datast"""
@@ -236,6 +255,7 @@ class Application(tk.Tk):
             
         self.log.set("Contruction terminée !")
         self.show_result()
+            
         
     def show_result(self):
         """Show the result image in the interface"""
