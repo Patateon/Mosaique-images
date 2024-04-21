@@ -41,9 +41,9 @@ class Video:
     def compute_targeted_resolution(self):
         """ Compute target res from a give target res height """
         
-        #target_res_h = self.target_res[0]
-        #target_res_w = (self.height * self.target_res[0]) // self.width
-        #self.target_res = (target_res_w, target_res_h)
+        target_res_h = self.target_res[0]
+        target_res_w = (self.frameHeight * self.target_res[0]) // self.frameWidth
+        self.target_res = (target_res_w, target_res_h)
 
     def load_image(self, source: str) -> np.ndarray:
         ''' Opens an image from specified source and 
@@ -188,6 +188,10 @@ class Video:
         self.frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+        
+        # Update target_res if auto_resize is set to True
+        if (self.auto_resize):
+            self.compute_targeted_resolution()
         
         # Create buffer to store frames
         self.buffer = np.empty((self.frameCount, self.frameHeight, self.frameWidth, 3), np.dtype('uint8'))

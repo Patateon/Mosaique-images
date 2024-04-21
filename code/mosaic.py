@@ -16,7 +16,7 @@ class Mosaic:
 
     def __init__(self, image_in_location: str, image_out_location: str, \
                 dataset_location: str,\
-                fast: bool = False, auto_resize: bool = True,\
+                noRepeat: bool = False, auto_resize: bool = True,\
                 target_res=(50, 50), mosaic_size=(32, 32)):
         """Initialize all parameters for mosaic building.
         image_in_location -> Path to the image in input.
@@ -33,7 +33,7 @@ class Mosaic:
         self.mosaic_size = mosaic_size
         self.images = None
         self.tree = None
-        self.fast = fast
+        self.noRepeat = noRepeat
         self.auto_resize = auto_resize
 
         self.image_in = self.load_image(image_in_location)
@@ -224,10 +224,10 @@ class Mosaic:
                 if len(template) == 4:
                     template = template[:3]
                 
-                if (self.fast):
-                    self.match_fast(i, j, template)                
+                if (self.noRepeat):
+                    self.match_slow(i, j, template, flag)             
                 else:
-                    self.match_slow(i, j, template, flag)
+                    self.match_fast(i, j, template)
                     
         
     def build_mosaic(self):

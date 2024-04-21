@@ -6,6 +6,7 @@ import time
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
+import cv2 # video handling
 
 # Mosaic & video lib
 import mosaic
@@ -36,14 +37,14 @@ class Application(tk.Tk):
         self.log = tk.StringVar()
         self.log.set("En attente")
 
-        self.fast_b = tk.IntVar()
+        self.noRepeat = tk.IntVar()
         self.auto_resize = tk.IntVar()
         self.show_advanced = False
 
         ## Button to access input image, output image
         # and dataset
-        label_in = tk.Label(main_frame, text='Image en entrée')
-        label_out = tk.Label(main_frame, text='Image en sortie')
+        label_in = tk.Label(main_frame, text='Entrée')
+        label_out = tk.Label(main_frame, text='Sortie')
         label_data = tk.Label(main_frame, text='Dataset')
         label_log = tk.Label(main_frame, textvariable=self.log)
 
@@ -67,8 +68,8 @@ class Application(tk.Tk):
         button_build_mosaic = tk.Button(main_frame,\
             text='Construire la mosaïque', command=self.photomosaic)
 
-        checkbox_fast = tk.Checkbutton(main_frame, text='Rapide',\
-            variable=self.fast_b, onvalue=1, offvalue=0)
+        checkbox_rept = tk.Checkbutton(main_frame, text='Sans répétitions',\
+            variable=self.noRepeat, onvalue=1, offvalue=0)
 
 
         label_in.grid(row=0, column=0, sticky='ew', pady=5)
@@ -85,7 +86,7 @@ class Application(tk.Tk):
         button_data_location.grid(row=2, column=2, sticky='ew', pady=5)
         button_build_mosaic.grid(row=3, column=2, sticky='ew', pady=5)
 
-        checkbox_fast.grid(row=3, column=0, sticky='ew', pady=5)
+        checkbox_rept.grid(row=3, column=0, sticky='ew', pady=5)
         
         button_advanced.grid(row=4, column=1, sticky='', pady=5)
 
@@ -206,6 +207,7 @@ class Application(tk.Tk):
         # Common video formats can be optimized to handle all video types
         video_formats = ('.mp4', '.webm', '.mkv', '.avi', '.mov', '.flv', '.gif') 
         if in_location.lower().endswith(video_formats):
+            self.is_video = True
             if self.show_advanced:
                 # Get resolution & mosaic size values
                 res_x = self.text_res_x.get()
@@ -216,10 +218,11 @@ class Application(tk.Tk):
                                             auto_resize=self.auto_resize.get(),\
                                             target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
             else:
-                self.mosaic = video.Video(in_location, out_location, data_location)
+                self.mosaic = video.Video(in_location, out_location, data_location, auto_resize=self.auto_resize.get())
         
         # Image handling
-        else:    
+        else:  
+            self.is_video = False  
             # Get resolution & mosaic size values
             if self.show_advanced:
                 res_x = self.text_res_x.get()
@@ -227,10 +230,10 @@ class Application(tk.Tk):
                 size_x = self.text_size_x.get()
                 size_y = self.text_size_y.get()
                 self.mosaic = mosaic.Mosaic(in_location, out_location, data_location,\
-                                            fast=self.fast_b.get(), auto_resize=self.auto_resize.get(),\
+                                            noRepeat=self.noRepeat.get(), auto_resize=self.auto_resize.get(),\
                                             target_res=(int(res_x), int(res_y)), mosaic_size=(int(size_x), int(size_y)))
             else:
-                self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, fast=self.fast_b.get())
+                self.mosaic = mosaic.Mosaic(in_location, out_location, data_location, noRepeat=self.noRepeat.get())
 
     def dataset(self):
         """Process the datast"""
@@ -259,24 +262,108 @@ class Application(tk.Tk):
         
     def show_result(self):
         """Show the result image in the interface"""
-        result_frame = tk.Frame(self.main_frame)
+        self.result_frame = tk.Frame(self.main_frame)
 
-        image_in = Image.open(self.text_in.get())
-        image_in = image_in.resize((300, 300), Image.LANCZOS)
-        image_in = ImageTk.PhotoImage(image_in)
-        self.panel1 = tk.Label(result_frame, image=image_in)
-        self.panel1.image = image_in  # Keep a reference to prevent garbage collection
-        self.panel1.grid(row=0, column=0, sticky='', pady=5)
+        if self.is_video:
+            # Video display input
+            video_in = self.text_in.get()
+            capIn = cv2.VideoCapture(video_in)
+            capIn.set(cv2.CAP_PROP_FRAME_WIDTH, 300) 
+            capIn.set(cv2.CAP_PROP_FRAME_HEIGHT, 300)
+            
+            # Video display output
+            video_out = self.text_out.get()
+            capOut = cv2.VideoCapture(video_out)
+            capOut.set(cv2.CAP_PROP_FRAME_WIDTH, 300) 
+            capOut.set(cv2.CAP_PROP_FRAME_HEIGHT, 300)
+            
+            # Read the first frame
+            ret, frame = capIn.read()
+            if ret:
+                # Convert frame to RGB from BGR
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # Convert to ImageTk format
+                image = Image.fromarray(frame_rgb)
+                image = image.resize((300, 300), Image.LANCZOS)
+                image = ImageTk.PhotoImage(image)
+                
+                # Display the frame
+                self.panel1 = tk.Label(self.result_frame, image=image)
+                self.panel1.image = image  # Keep a reference to prevent garbage collection
+                self.panel1.grid(row=0, column=0, sticky='', pady=5)
+            
+            ret, frame = capOut.read()
+            if ret:
+                # Convert frame to RGB from BGR
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # Convert to ImageTk format
+                image = Image.fromarray(frame_rgb)
+                image = image.resize((300, 300), Image.LANCZOS)
+                image = ImageTk.PhotoImage(image)
+                
+                # Display the frame
+                self.panel2 = tk.Label(self.result_frame, image=image)
+                self.panel2.image = image  # Keep a reference to prevent garbage collection
+                self.panel2.grid(row=0, column=1, sticky='', pady=5)
+            
+            # Function to update video frames
+            def update_video():
+                # Update the input video
+                ret, frame = capIn.read()
+                if ret:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    image = Image.fromarray(frame_rgb)
+                    image = image.resize((300, 300), Image.LANCZOS)
+                    image = ImageTk.PhotoImage(image)
+                    
+                    # Update the image in the label
+                    self.panel1.config(image=image)
+                    self.panel1.image = image  # Keep a reference to prevent garbage collection
+                    self.update_idletasks()  # Update the GUI
+                    
+                    # Schedule the next update
+                    self.after(20, update_video)
+                else:
+                    capIn.release()
+                    
+                # Update the output video
+                ret, frame = capOut.read()
+                if ret:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    image = Image.fromarray(frame_rgb)
+                    image = ImageTk.PhotoImage(image)
+                    
+                    # Update the image in the label
+                    self.panel2.config(image=image)
+                    self.panel2.image = image  # Keep a reference to prevent garbage collection
+                    self.update_idletasks()  # Update the GUI
+                    
+                    # Schedule the next update
+                    self.after(20, update_video)
+                else:
+                    capOut.release()
 
-        image_out = Image.open(self.text_out.get())
-        image_out = image_out.resize((300, 300), Image.LANCZOS)
-        image_out = ImageTk.PhotoImage(image_out)
-        self.panel2 = tk.Label(result_frame, image=image_out)
-        self.panel2.image = image_out  # Keep a reference to prevent garbage collection
-        self.panel2.grid(row=0, column=1, sticky='', pady=5)
+            # Start updating the video frames
+            update_video()
+        
+        else:
+            # Input image display
+            image_in = Image.open(self.text_in.get())
+            image_in = image_in.resize((300, 300), Image.LANCZOS)
+            image_in = ImageTk.PhotoImage(image_in)
+            self.panel1 = tk.Label(self.result_frame, image=image_in)
+            self.panel1.image = image_in  # Keep a reference to prevent garbage collection
+            self.panel1.grid(row=0, column=0, sticky='', pady=5)
 
-        result_frame.grid(row=6, column=1, sticky='', pady=5)
-
+            # Output image display
+            image_out = Image.open(self.text_out.get())
+            image_out = image_out.resize((300, 300), Image.LANCZOS)
+            image_out = ImageTk.PhotoImage(image_out)
+            self.panel2 = tk.Label(self.result_frame, image=image_out)
+            self.panel2.image = image_out  # Keep a reference to prevent garbage collection
+            self.panel2.grid(row=0, column=1, sticky='', pady=5)
+         
+        self.result_frame.grid(row=6, column=1, sticky='', pady=5)
         self.update()
 
 if __name__ == "__main__":
