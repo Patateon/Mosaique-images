@@ -331,6 +331,7 @@ class Application(tk.Tk):
                 if ret:
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     image = Image.fromarray(frame_rgb)
+                    image = image.resize((300, 300), Image.LANCZOS)
                     image = ImageTk.PhotoImage(image)
                     
                     # Update the image in the label
