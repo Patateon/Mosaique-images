@@ -1,6 +1,17 @@
 # Mosaique-images
 Projet de M1 pour l'UE **Traitement des images** et **Codage et compression multimédia** : Mosaïque d'image avec critères avancés
 
+## Installation
+
+Installer les dépendances
+```
+pip install -r requirements.txt
+```
+Lancer l'interface graphique
+```
+python3 ./application.py
+```
+
 ## Arborescence 
 
 ### Code
