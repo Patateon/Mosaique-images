@@ -1,6 +1,7 @@
 # Mosaique-images
 Projet de M1 pour l'UE **Traitement des images** et **Codage et compression multimédia** : Mosaïque d'image avec critères avancés
 ![Olé](https://github.com/Patateon/Mosaique-images/blob/main/code/images_test/result.jpg)
+
 https://github.com/Patateon/Mosaique-images/assets/92885323/8c468781-2fc5-4155-8755-b89e0505e0db
 
 ## Installation
